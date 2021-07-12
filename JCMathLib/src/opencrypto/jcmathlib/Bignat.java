@@ -1609,87 +1609,133 @@ public class Bignat {
         this.clone(bnh.fnc_mult_mod_tmpThis);
         bnh.fnc_mult_mod_tmpThis.unlock();
     }
-	
 
-    //
     /**
      * Computes square root of provided bignat which MUST be prime using Tonelli
-     * Shanks Algorithm. The result (one of the two roots) is stored to this. 
+     * Shanks Algorithm. The result (one of the two roots) is stored to this.
      * @param p value to compute square root from
      */
     public void sqrt_FP(Bignat p) {
-        PM.check(PM.TRAP_BIGNAT_SQRT_1);
-        //1. By factoring out powers of 2, find Q and S such that p-1=Q2^S p-1=Q*2^S and Q is odd
+        // 1. Find Q and S such that p - 1 = Q * 2^S and Q is odd
         bnh.fnc_sqrt_p_1.lock();
         bnh.fnc_sqrt_p_1.clone(p);
-        PM.check(PM.TRAP_BIGNAT_SQRT_2);
         bnh.fnc_sqrt_p_1.decrement_one();
-        PM.check(PM.TRAP_BIGNAT_SQRT_3);
 
-        //Compute Q
-        bnh.fnc_sqrt_Q.lock();
-        bnh.fnc_sqrt_Q.clone(bnh.fnc_sqrt_p_1);
-        bnh.fnc_sqrt_Q.divide_by_2(); //Q /= 2
-        PM.check(PM.TRAP_BIGNAT_SQRT_4);
-
-        //Compute S
         bnh.fnc_sqrt_S.lock();
         bnh.fnc_sqrt_S.set_size(p.length());
         bnh.fnc_sqrt_S.zero();
-        bnh.fnc_sqrt_tmp.lock();
-        bnh.fnc_sqrt_tmp.set_size(p.length());
-        bnh.fnc_sqrt_tmp.zero();
+        bnh.fnc_sqrt_Q.lock();
+        bnh.fnc_sqrt_Q.clone(bnh.fnc_sqrt_p_1);
 
-        PM.check(PM.TRAP_BIGNAT_SQRT_5);
-        while (bnh.fnc_sqrt_tmp.same_value(bnh.fnc_sqrt_Q)==false){
+        while (!bnh.fnc_sqrt_Q.is_odd()) {
             bnh.fnc_sqrt_S.increment_one();
-            bnh.fnc_sqrt_tmp.mod_mult(bnh.fnc_sqrt_S, bnh.fnc_sqrt_Q, p);
+            bnh.fnc_sqrt_Q.divide_by_2();
         }
-        bnh.fnc_sqrt_tmp.unlock();
-        PM.check(PM.TRAP_BIGNAT_SQRT_6);
-        bnh.fnc_sqrt_S.unlock();
 
-        //2. Find the first quadratic non-residue z by brute-force search
+        // 2. Find the first quadratic non-residue z by brute-force search
         bnh.fnc_sqrt_exp.lock();
         bnh.fnc_sqrt_exp.clone(bnh.fnc_sqrt_p_1);
-        PM.check(PM.TRAP_BIGNAT_SQRT_7);
         bnh.fnc_sqrt_exp.divide_by_2();
-        
-        PM.check(PM.TRAP_BIGNAT_SQRT_8);
 
         bnh.fnc_sqrt_z.lock();
         bnh.fnc_sqrt_z.set_size(p.length());
         bnh.fnc_sqrt_z.one();
         bnh.fnc_sqrt_tmp.lock();
+        bnh.fnc_sqrt_tmp.set_size(p.length());
         bnh.fnc_sqrt_tmp.zero();
         bnh.fnc_sqrt_tmp.copy(Bignat_Helper.ONE);
 
-        PM.check(PM.TRAP_BIGNAT_SQRT_9);
-        while (bnh.fnc_sqrt_tmp.same_value(bnh.fnc_sqrt_p_1)==false) {
+        while (!bnh.fnc_sqrt_tmp.same_value(bnh.fnc_sqrt_p_1)) {
             bnh.fnc_sqrt_z.increment_one();
             bnh.fnc_sqrt_tmp.copy(bnh.fnc_sqrt_z);
-            bnh.fnc_sqrt_tmp.mod_exp(bnh.fnc_sqrt_exp, p);		
+            bnh.fnc_sqrt_tmp.mod_exp(bnh.fnc_sqrt_exp, p); // Euler's criterion
         }
-        PM.check(PM.TRAP_BIGNAT_SQRT_10);
         bnh.fnc_sqrt_p_1.unlock();
         bnh.fnc_sqrt_tmp.unlock();
-        bnh.fnc_sqrt_z.unlock();
+
+        // 3. Compute the first candidate
         bnh.fnc_sqrt_exp.copy(bnh.fnc_sqrt_Q);
-        bnh.fnc_sqrt_Q.unlock();
-        PM.check(PM.TRAP_BIGNAT_SQRT_11);
         bnh.fnc_sqrt_exp.increment_one();
-        PM.check(PM.TRAP_BIGNAT_SQRT_12);
         bnh.fnc_sqrt_exp.divide_by_2();
-        PM.check(PM.TRAP_BIGNAT_SQRT_13);
+
+        bnh.fnc_sqrt_t.lock();
+        bnh.fnc_sqrt_t.copy(this);
+        bnh.fnc_sqrt_t.mod_exp(bnh.fnc_sqrt_Q, p);
+
+        if (bnh.fnc_sqrt_t.is_zero()) {
+            bnh.fnc_sqrt_z.unlock();
+            bnh.fnc_sqrt_S.unlock();
+            bnh.fnc_sqrt_t.unlock();
+            bnh.fnc_sqrt_exp.unlock();
+            bnh.fnc_sqrt_Q.unlock();
+            this.zero();
+            return;
+        }
 
         this.mod(p);
-        PM.check(PM.TRAP_BIGNAT_SQRT_14);
         this.mod_exp(bnh.fnc_sqrt_exp, p);
-        PM.check(PM.TRAP_BIGNAT_SQRT_15);
         bnh.fnc_sqrt_exp.unlock();
-    } // end void sqrt(Bignat p)	
-	
-    
+
+        if (bnh.fnc_sqrt_t.same_value(Bignat_Helper.ONE)) {
+            bnh.fnc_sqrt_z.unlock();
+            bnh.fnc_sqrt_S.unlock();
+            bnh.fnc_sqrt_t.unlock();
+            bnh.fnc_sqrt_Q.unlock();
+            return;
+        }
+
+        // 4. Search for further candidates
+        bnh.fnc_sqrt_z.mod_exp(bnh.fnc_sqrt_Q, p);
+        bnh.fnc_sqrt_Q.unlock();
+
+        while(true) {
+            bnh.fnc_sqrt_tmp.lock();
+            bnh.fnc_sqrt_tmp.copy(bnh.fnc_sqrt_t);
+            bnh.fnc_sqrt_i.lock();
+            bnh.fnc_sqrt_i.set_size(p.length());
+            bnh.fnc_sqrt_i.zero();
+
+            do {
+                bnh.fnc_sqrt_tmp.mod_exp2(p);
+                bnh.fnc_sqrt_i.increment_one();
+            } while (!bnh.fnc_sqrt_tmp.same_value(Bignat_Helper.ONE));
+
+            bnh.fnc_sqrt_tmp.unlock();
+
+            bnh.fnc_sqrt_b.lock();
+            bnh.fnc_sqrt_b.copy(bnh.fnc_sqrt_z);
+            bnh.fnc_sqrt_S.subtract(bnh.fnc_sqrt_i);
+            bnh.fnc_sqrt_S.decrement_one();
+
+            bnh.fnc_sqrt_tmp.lock();
+            bnh.fnc_sqrt_tmp.one();
+            while(!bnh.fnc_sqrt_S.is_zero()) {
+                bnh.fnc_sqrt_tmp.shift_left();
+                bnh.fnc_sqrt_S.decrement_one();
+            }
+            bnh.fnc_sqrt_b.mod_exp(bnh.fnc_sqrt_tmp, p);
+            bnh.fnc_sqrt_tmp.unlock();
+            bnh.fnc_sqrt_S.copy(bnh.fnc_sqrt_i);
+            bnh.fnc_sqrt_i.unlock();
+            bnh.fnc_sqrt_z.copy(bnh.fnc_sqrt_b);
+            bnh.fnc_sqrt_z.mod_exp2(p);
+            bnh.fnc_sqrt_t.mod_mult(bnh.fnc_sqrt_t, bnh.fnc_sqrt_z, p);
+            this.mod_mult(this, bnh.fnc_sqrt_b, p);
+            bnh.fnc_sqrt_b.unlock();
+
+            if (bnh.fnc_sqrt_t.is_zero()) {
+                this.zero();
+                break;
+            }
+            if (bnh.fnc_sqrt_t.same_value(Bignat_Helper.ONE)) {
+                break;
+            }
+        }
+        bnh.fnc_sqrt_z.unlock();
+        bnh.fnc_sqrt_S.unlock();
+        bnh.fnc_sqrt_t.unlock();
+    }
+
     /**
      * Computes and stores modulo of this bignat. 
      * @param modulo value of modulo

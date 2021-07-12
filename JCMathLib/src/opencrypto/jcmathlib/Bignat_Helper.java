@@ -78,6 +78,9 @@ public class Bignat_Helper extends Base_Helper {
     Bignat fnc_sqrt_tmp;
     Bignat fnc_sqrt_exp;
     Bignat fnc_sqrt_z;
+    Bignat fnc_sqrt_i;
+    Bignat fnc_sqrt_t;
+    Bignat fnc_sqrt_b;
 
     Bignat fnc_mod_minus_2;
 
@@ -146,11 +149,15 @@ public class Bignat_Helper extends Base_Helper {
         fnc_negate_tmp = rm.helper_BN_B;
 
         fnc_sqrt_S = rm.helper_BN_A;
-        fnc_sqrt_exp = rm.helper_BN_A;
-        fnc_sqrt_p_1 = rm.helper_BN_B;
+        fnc_sqrt_exp = rm.helper_BN_G;
+        fnc_sqrt_p_1 = rm.helper_BN_D;
         fnc_sqrt_Q = rm.helper_BN_C;
-        fnc_sqrt_tmp = rm.helper_BN_D;
-        fnc_sqrt_z = rm.helper_BN_E;
+        fnc_sqrt_tmp = rm.helper_BN_E;
+        fnc_sqrt_z = rm.helper_BN_B;
+        fnc_sqrt_i = rm.helper_BN_G;
+        fnc_sqrt_t = rm.helper_BN_D;
+        fnc_sqrt_b = rm.helper_BN_C;
+
 
         fnc_mod_mult_tmpThis = rm.helper_BN_E; // mod_mult is called from  fnc_sqrt => requires helper_BN_E not being locked in fnc_sqrt when mod_mult is called
 
