@@ -587,6 +587,16 @@ public class BigNat {
         short j;
 
         j = (short) (other.size + shift - this.size + start);
+
+        // TODO: what's the expected behavior when start > 0?
+        if (start == 0) {
+            for (short i = 0; i < j; ++i) {
+                if (other.value[i] != 0) {
+                    return true;
+                }
+            }
+        }
+
         short thisShort, otherShort;
         for (short i = start; i < this.size; i++, j++) {
             thisShort = (short) (this.value[i] & DIGIT_MASK);
